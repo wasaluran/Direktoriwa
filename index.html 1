@@ -1,0 +1,50 @@
+<script>
+const channelList = document.getElementById('channelList');
+const searchInput = document.getElementById('searchInput');
+const db = firebase.database();
+
+// Fungsi shuffle array
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+// Tampilkan saluran dari Firebase secara acak
+db.ref('channels').on('value', snap => {
+  let channels = [];
+  snap.forEach(child => channels.push({key: child.key, ...child.val()}));
+
+  channels = shuffle(channels); // acak
+
+  channelList.innerHTML = '';
+  channels.forEach(c => {
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.innerHTML = `
+      ${c.owner===ownerId ? `<button class="delete-btn" onclick="deleteChannel('${c.key}')">Hapus</button>`:''}
+      <h3>${c.name}</h3>
+      <p>${c.desc}</p>
+      <a href="${c.link}" target="_blank">Masuk Saluran</a>
+    `;
+    channelList.appendChild(div);
+  });
+});
+
+// Fungsi hapus tetap sama
+function deleteChannel(key){
+  if(confirm('Hapus saluran ini?')){
+    db.ref('channels/'+key).remove();
+  }
+}
+
+// Search/filter tetap jalan
+searchInput.addEventListener('keyup',()=>{
+  const v=searchInput.value.toLowerCase();
+  document.querySelectorAll('.card').forEach(c=>{
+    c.style.display=c.innerText.toLowerCase().includes(v)?'block':'none';
+  });
+});
+  </script>
