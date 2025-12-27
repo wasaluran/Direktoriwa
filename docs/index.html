@@ -1,12 +1,10 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<meta name="google-site-verification" content="kOA1mXmdxdQ6UPbH_vuFs4P2czsbeol8Ku9ifHSo5kY" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Direktori Saluran WhatsApp</title>
-
-<!-- META GOOGLE VERIFICATION -->
-<meta name="google-site-verification" content="kOA1mXmdxdQ6UPbH_vuFs4P2czsbeol8Ku9ifHSo5kY" />
 
 <style>
 *{box-sizing:border-box;font-family:Arial,Helvetica,sans-serif;}
@@ -52,7 +50,7 @@ footer{text-align:center;padding:15px;font-size:13px;color:#777;}
     <p>Kunjungi saluran WhatsApp utama:</p>
     <a href="https://whatsapp.com/channel/0029VbBS24J3gvWYXNUrRs45" target="_blank">Masuk Saluran</a>
     <p style="margin-top:15px;font-weight:bold;">DONASI</p>
-    <a href="https://saweria.co/Animevora" target="_blank">Donasi Sekarang</a>
+    <a href="https://saweria.co/Devwebsite" target="_blank">Donasi Sekarang</a>
   </div>
 </div>
 
@@ -65,7 +63,7 @@ footer{text-align:center;padding:15px;font-size:13px;color:#777;}
 
 <section style="background:#fff;padding:15px;border-radius:12px;margin-bottom:20px;box-shadow:0 4px 10px rgba(0,0,0,0.08)">
   <h2>Submit Saluran WhatsApp</h2>
-  <p>1 link WhatsApp hanya bisa disubmit 1 kali, oke, jangan serakah </p>
+  <p>1 link WhatsApp hanya bisa disubmit 1 kali</p>
 
   <input type="text" id="name" placeholder="Nama Saluran WhatsApp" style="width:100%;padding:10px;margin-bottom:8px">
   <input type="text" id="desc" placeholder="Deskripsi singkat saluran" style="width:100%;padding:10px;margin-bottom:8px">
@@ -103,7 +101,7 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// OWNER (1 browser = 1 owner)
+// OWNER
 let ownerId = localStorage.getItem('ownerId');
 if(!ownerId){
   ownerId = 'user_' + Math.random().toString(36).slice(2);
@@ -116,12 +114,10 @@ const nameInput = document.getElementById('name');
 const descInput = document.getElementById('desc');
 const linkInput = document.getElementById('link');
 
-// 🔐 SAFE KEY (1 LINK = 1 SUBMIT)
 function safeKey(link){
   return link.trim().toLowerCase().replace(/\/+$/,'').replace(/[.#$/[\]]/g,'_');
 }
 
-// ➕ SUBMIT
 function addChannel(){
   const name = nameInput.value.trim();
   const desc = descInput.value.trim();
@@ -134,15 +130,10 @@ function addChannel(){
   const refLink = db.ref('channels/' + key);
 
   refLink.once('value', snap=>{
-    if(snap.exists()){
-      alert('❌ Link ini sudah pernah disubmit');
-      return;
-    }
+    if(snap.exists()) return alert('❌ Link sudah pernah disubmit');
 
     refLink.set({
-      name,
-      desc,
-      link,
+      name, desc, link,
       owner: ownerId,
       time: Date.now()
     });
@@ -151,50 +142,45 @@ function addChannel(){
     nameInput.value='';
     descInput.value='';
     linkInput.value='';
+    loadChannels();
   });
 }
 
-// 🔀 SHUFFLE
-function shuffle(arr){
-  for(let i=arr.length-1;i>0;i--){
-    const j=Math.floor(Math.random()*(i+1));
-    [arr[i],arr[j]]=[arr[j],arr[i]];
-  }
-  return arr;
+// LOAD + ACAK TOTAL
+function loadChannels(){
+  db.ref('channels').once('value').then(snap=>{
+    channelList.innerHTML='';
+    let data=[];
+
+    snap.forEach(child=>{
+      data.push({key:child.key, ...child.val()});
+    });
+
+    for(let i=data.length-1;i>0;i--){
+      const j=Math.floor(Math.random()*(i+1));
+      [data[i],data[j]]=[data[j],data[i]];
+    }
+
+    data.forEach(c=>{
+      const div=document.createElement('div');
+      div.className='card';
+      div.innerHTML=`
+        ${c.owner===ownerId?`<button class="delete-btn" onclick="deleteChannel('${c.key}')">Hapus</button>`:''}
+        <h3>${c.name}</h3>
+        <p>${c.desc}</p>
+        <a href="${c.link}" target="_blank">Masuk Saluran</a>
+      `;
+      channelList.appendChild(div);
+    });
+  });
 }
 
-// 📥 LOAD DATA (ACAK)
-db.ref('channels').on('value', snap=>{
-  channelList.innerHTML='';
-  let data=[];
-
-  snap.forEach(child=>{
-    data.push({key:child.key,...child.val()});
-  });
-
-  shuffle(data);
-
-  data.forEach(c=>{
-    const div=document.createElement('div');
-    div.className='card';
-    div.innerHTML=`
-      ${c.owner===ownerId?`<button class="delete-btn" onclick="deleteChannel('${c.key}')">Hapus</button>`:''}
-      <h3>${c.name}</h3>
-      <p>${c.desc}</p>
-      <a href="${c.link}" target="_blank">Masuk Saluran</a>
-    `;
-    channelList.appendChild(div);
-  });
-});
-
-// 🗑️ DELETE (OWNER ONLY)
 function deleteChannel(key){
   if(confirm('Hapus saluran ini?')){
-    db.ref('channels/'+key).remove();
+    db.ref('channels/'+key).remove().then(loadChannels);
   }
 }
 
-// 🔍 SEARCH
 searchInput.addEventListener('keyup',()=>{
   const v=searchInput.value.toLowerCase();
   document.querySelectorAll('.card').forEach(c=>{
@@ -202,10 +188,11 @@ searchInput.addEventListener('keyup',()=>{
   });
 });
 
-// ❌ POPUP
 function closeDonate(){
   document.getElementById('donatePopup').style.display='none';
 }
+
+loadChannels();
 </script>
 
 </body>
